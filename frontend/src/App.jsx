@@ -1,25 +1,126 @@
-function App() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 text-slate-900">
-      <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/60">
-        <p className="mb-3 text-sm font-medium uppercase tracking-[0.2em] text-blue-600">
-          B2B RFQ Marketplace
-        </p>
-        <h1 className="text-4xl font-bold tracking-tight text-slate-900">
-          Tailwind is working
-        </h1>
-        <p className="mt-4 text-base text-slate-600">
-          The frontend is now configured with Tailwind v4 and Vite.
-        </p>
-        <button
-          type="button"
-          className="mt-6 inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-slate-700"
-        >
-          Ready to build
-        </button>
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import CreateRFQ from './pages/CreateRFQ';
+import MyRFQs from './pages/MyRFQs';
+import RFQDetail from './pages/RFQDetail';
+import BrowseRFQs from './pages/BrowseRFQs';
+import SubmitQuotation from './pages/SubmitQuotation';
+import MyQuotations from './pages/MyQuotations';
+import Navbar from './components/Navbar';
+
+function ProtectedRoute({ children, allowedRoles }) {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
+          <p className="mt-3 text-sm text-gray-600">Loading...</p>
+        </div>
       </div>
-    </main>
-  )
+    );
+  }
+  if (!user) return <Navigate to="/login" />;
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" />;
+  }
+  return children;
 }
 
-export default App
+function AppRoutes() {
+  return (
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+      <Navbar />
+      <main className="container mx-auto px-4 py-8">
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['buyer', 'supplier']}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/rfqs/create"
+            element={
+              <ProtectedRoute allowedRoles={['buyer']}>
+                <CreateRFQ />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/my-rfqs"
+            element={
+              <ProtectedRoute allowedRoles={['buyer']}>
+                <MyRFQs />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/rfqs/:id"
+            element={
+              <ProtectedRoute allowedRoles={['buyer', 'supplier']}>
+                <RFQDetail />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/browse-rfqs"
+            element={
+              <ProtectedRoute allowedRoles={['supplier']}>
+                <BrowseRFQs />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/rfqs/:id/quote"
+            element={
+              <ProtectedRoute allowedRoles={['supplier']}>
+                <SubmitQuotation />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/my-quotations"
+            element={
+              <ProtectedRoute allowedRoles={['supplier']}>
+                <MyQuotations />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="/" element={<Navigate to="/dashboard" />} />
+        </Routes>
+      </main>
+
+      <footer className="border-t bg-white">
+        <div className="container mx-auto px-4 py-6 text-center text-sm text-gray-500">
+          B2B RFQ Marketplace • Built with React + FastAPI
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
